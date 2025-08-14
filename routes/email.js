@@ -72,17 +72,43 @@ router.get('/test-connection', async (req, res) => {
 });
 
 // Extract company name from email
+// Enhanced company extraction
 const extractCompanyFromEmail = (email) => {
   const domain = email.split('@')[1];
   if (!domain) return 'Your Company';
   
   const companyName = domain.split('.')[0];
-  return companyName.charAt(0).toUpperCase() + companyName.slice(1);
+  
+  // Handle common email providers better
+  const emailProviders = {
+    'gmail': 'Gmail',
+    'yahoo': 'Yahoo',
+    'outlook': 'Outlook', 
+    'hotmail': 'Hotmail',
+    'aol': 'AOL',
+    'icloud': 'iCloud'
+  };
+  
+  if (emailProviders[companyName.toLowerCase()]) {
+    return emailProviders[companyName.toLowerCase()];
+  }
+  
+  // Clean up company name
+  const cleanCompanyName = companyName
+    .replace(/[0-9]/g, '') // Remove numbers
+    .replace(/[-_]/g, ' ') // Replace dashes/underscores with spaces
+    .trim();
+  
+  // Capitalize properly
+  return cleanCompanyName
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 };
 
-// Extract name from email
-// Smart name detection function
-// Smart name detection function
+
+// Enhanced smart name detection function
+// Enhanced smart name detection function
 const extractNameFromEmail = (email) => {
   const localPart = email.split('@')[0].toLowerCase();
   
@@ -94,7 +120,7 @@ const extractNameFromEmail = (email) => {
   
   // Check for HR/hiring related terms first
   const hrTerms = ['hr', 'hiring', 'recruit', 'talent', 'jobs', 'career', 'careers', 'employment', 
-                   'admin', 'info', 'contact', 'support', 'team', 'office', 'manager'];
+                   'admin', 'info', 'contact', 'support', 'team', 'office', 'manager', 'noreply', 'no-reply'];
   
   for (const part of parts) {
     if (hrTerms.some(term => part.includes(term))) {
@@ -105,22 +131,22 @@ const extractNameFromEmail = (email) => {
   // Function to check if a string looks like a human name
   const looksLikeHumanName = (str) => {
     // Remove numbers and check remaining length
-    const cleanStr = str.replace(/\d/g, '');  // Fixed: single backslash
+    const cleanStr = str.replace(/\d/g, '');
     
-    // Must be at least 2 characters after removing numbers
-    if (cleanStr.length < 2) return false;
+    // Must be at least 3 characters after removing numbers (increased from 2)
+    if (cleanStr.length < 3) return false;
     
-    // Must not be more than 70% numbers
+    // Must not be more than 50% numbers (reduced from 70%)
     const numberRatio = (str.length - cleanStr.length) / str.length;
-    if (numberRatio > 0.7) return false;
+    if (numberRatio > 0.5) return false;
     
     // Check for common non-name patterns
     const nonNamePatterns = [
-      /^[a-z]+\d{3,}$/, // Fixed: single backslash - like 'user123', 'test1234'
-      /^\d+[a-z]+$/, // Fixed: single backslash - like '123user'
-      /^(test|demo|sample|example|temp|admin|info|no|reply|noreply)/, // common non-names
+      /^[a-z]+\d{3,}$/, // like 'user123', 'test1234'
+      /^\d+[a-z]+$/, // like '123user'
+      /^(test|demo|sample|example|temp|admin|info|no|reply|noreply|web|mail|email)/, // common non-names
       /^[a-z]{1,2}$/, // single/double letters like 'a', 'ab'
-      /^(www|web|mail|email|contact|support|help|service)/, // web-related terms
+      /^(www|web|mail|email|contact|support|help|service|labs|lab|dev|api)/, // web-related terms
     ];
     
     for (const pattern of nonNamePatterns) {
@@ -131,45 +157,61 @@ const extractNameFromEmail = (email) => {
     const hasVowel = /[aeiou]/.test(cleanStr);
     if (!hasVowel && cleanStr.length > 4) return false;
     
-    // Check for reasonable consonant-vowel ratio
-    const vowels = cleanStr.match(/[aeiou]/g) || [];
-    const consonants = cleanStr.match(/[bcdfghjklmnpqrstvwxyz]/g) || [];
-    
     // Too many consonants in a row might not be a name
     if (/[bcdfghjklmnpqrstvwxyz]{5,}/.test(cleanStr)) return false;
+    
+    // Check if it looks like a brand/company name (like 'danishlabs')
+    if (cleanStr.includes('labs') || cleanStr.includes('tech') || cleanStr.includes('dev') || 
+        cleanStr.includes('corp') || cleanStr.includes('inc') || cleanStr.includes('ltd')) {
+      return false;
+    }
     
     return true;
   };
   
-  // Look for potential name in email parts
+  // Look for potential name in email parts - prioritize actual names over company-like terms
   let potentialName = null;
   
   for (const part of parts) {
     if (part.length >= 3 && looksLikeHumanName(part)) {
-      // Prefer longer, more name-like parts
-      if (!potentialName || part.length > potentialName.length) {
-        potentialName = part;
+      // Clean the part and check if it's still a good name
+      const cleanPart = part.replace(/\d+$/, '');
+      
+      // Prefer shorter, more name-like parts over longer company-like ones
+      if (cleanPart.length <= 12 && cleanPart.length >= 3) {
+        if (!potentialName || (cleanPart.length < potentialName.length && cleanPart.length >= 4)) {
+          potentialName = cleanPart;
+        }
       }
     }
   }
   
   // If we found a potential name, return it
   if (potentialName) {
-    // Clean the name (remove numbers from end)
-    const cleanName = potentialName.replace(/\d+$/, ''); // Fixed: single backslash
-    return capitalize(cleanName);
+    return capitalize(potentialName);
   }
   
   // Special case: if email has firstname.lastname pattern, try to use first part
   if (parts.length === 2 && parts[0].length >= 3 && parts[1].length >= 3) {
-    if (looksLikeHumanName(parts[0])) {
-      return capitalize(parts[0].replace(/\d+$/, '')); // Fixed: single backslash
+    const firstPart = parts[0].replace(/\d+$/, '');
+    if (looksLikeHumanName(firstPart) && firstPart.length <= 10) {
+      return capitalize(firstPart);
+    }
+  }
+  
+  // Check if the first part might be a name (even if it failed other tests)
+  const firstPart = parts[0].replace(/\d+$/, '');
+  if (firstPart.length >= 4 && firstPart.length <= 10 && /[aeiou]/.test(firstPart)) {
+    // Check if it's not obviously a company term
+    if (!/(lab|tech|dev|corp|inc|ltd|web|mail|info|admin)/.test(firstPart)) {
+      return capitalize(firstPart);
     }
   }
   
   // Default to Hiring Team if no recognizable name found
   return 'Hiring Team';
 };
+
 
  
 
