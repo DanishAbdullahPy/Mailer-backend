@@ -81,18 +81,95 @@ const extractCompanyFromEmail = (email) => {
 };
 
 // Extract name from email
+// Smart name detection function
 const extractNameFromEmail = (email) => {
-  const localPart = email.split('@')[0];
+  const localPart = email.split('@')[0].toLowerCase();
+  
+  // Function to capitalize first letter
+  const capitalize = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+  
+  // Split email by common delimiters
   const parts = localPart.split(/[._-]/);
   
-  if (parts.length >= 2) {
-    return parts.map(part => 
-      part.charAt(0).toUpperCase() + part.slice(1)
-    ).join(' ');
+  // Check for HR/hiring related terms first
+  const hrTerms = ['hr', 'hiring', 'recruit', 'talent', 'jobs', 'career', 'careers', 'employment', 
+                   'admin', 'info', 'contact', 'support', 'team', 'office', 'manager'];
+  
+  for (const part of parts) {
+    if (hrTerms.some(term => part.includes(term))) {
+      return 'Hiring Team';
+    }
   }
   
-  return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+  // Function to check if a string looks like a human name
+  const looksLikeHumanName = (str) => {
+    // Remove numbers and check remaining length
+    const cleanStr = str.replace(/\d/g, '');
+    
+    // Must be at least 2 characters after removing numbers
+    if (cleanStr.length < 2) return false;
+    
+    // Must not be more than 70% numbers
+    const numberRatio = (str.length - cleanStr.length) / str.length;
+    if (numberRatio > 0.7) return false;
+    
+    // Check for common non-name patterns
+    const nonNamePatterns = [
+      /^[a-z]+\d{3,}$/, // like 'user123', 'test1234'
+      /^\d+[a-z]+$/, // like '123user'
+      /^(test|demo|sample|example|temp|admin|info|no|reply|noreply)/, // common non-names
+      /^[a-z]{1,2}$/, // single/double letters like 'a', 'ab'
+      /^(www|web|mail|email|contact|support|help|service)/, // web-related terms
+    ];
+    
+    for (const pattern of nonNamePatterns) {
+      if (pattern.test(cleanStr)) return false;
+    }
+    
+    // Check for vowel presence (most names have vowels)
+    const hasVowel = /[aeiou]/.test(cleanStr);
+    if (!hasVowel && cleanStr.length > 4) return false;
+    
+    // Check for reasonable consonant-vowel ratio
+    const vowels = cleanStr.match(/[aeiou]/g) || [];
+    const consonants = cleanStr.match(/[bcdfghjklmnpqrstvwxyz]/g) || [];
+    
+    // Too many consonants in a row might not be a name
+    if (/[bcdfghjklmnpqrstvwxyz]{5,}/.test(cleanStr)) return false;
+    
+    return true;
+  };
+  
+  // Look for potential name in email parts
+  let potentialName = null;
+  
+  for (const part of parts) {
+    if (part.length >= 3 && looksLikeHumanName(part)) {
+      // Prefer longer, more name-like parts
+      if (!potentialName || part.length > potentialName.length) {
+        potentialName = part;
+      }
+    }
+  }
+  
+  // If we found a potential name, return it
+  if (potentialName) {
+    // Clean the name (remove numbers from end)
+    const cleanName = potentialName.replace(/\d+$/, '');
+    return capitalize(cleanName);
+  }
+  
+  // Special case: if email has firstname.lastname pattern, try to use first part
+  if (parts.length === 2 && parts[0].length >= 3 && parts[1].length >= 3) {
+    if (looksLikeHumanName(parts[0])) {
+      return capitalize(parts[0].replace(/\d+$/, ''));
+    }
+  }
+  
+  // Default to Hiring Team if no recognizable name found
+  return 'Hiring Team';
 };
+ 
 
 // Send single email
 router.post('/send-email', async (req, res) => {
