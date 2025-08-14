@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://your-vercel-app.vercel.app' // Update with your actual Vercel URL
+    'https://mailer-backend-fkm3.onrender.com'  
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
