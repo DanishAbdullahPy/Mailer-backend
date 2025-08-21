@@ -155,7 +155,7 @@ const getEmailTemplate = (name, company, area) => `
       <a href="https://drive.google.com/drive/u/0/folders/1PmsRBzyB2bMdQzVFntOcBb5Za7WrA2w6" class="link">
         📄 Resume
       </a>
-      <a href="https://linkedin.com/in/danish-abdullah-268214214/" class="link">
+      <a href="https://www.linkedin.com/in/danish-abdullah-8295b137b/" class="link">
         💼 LinkedIn
       </a>
       <a href="https://github.com/DanishAbdullahPy" class="link">
@@ -202,7 +202,7 @@ Would love to connect if this feels like a potential match. Thanks for your time
 
 Links:
 Resume: https://drive.google.com/drive/u/0/folders/1PmsRBzyB2bMdQzVFntOcBb5Za7WrA2w6
-LinkedIn: https://linkedin.com/in/danish-abdullah-268214214/
+LinkedIn: https://www.linkedin.com/in/danish-abdullah-8295b137b/
 GitHub: https://github.com/DanishAbdullahPy
 
 Tech Stack: React, Node.js, PostgreSQL, Azure, Redux, APIs
